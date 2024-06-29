@@ -20,6 +20,8 @@ use procinfo::pid::stat;
 
 struct Scheduler<'a> {
     bpf: BpfScheduler<'a>,
+    served_fifo: u64,
+    served_rr: u64,
 }
 
 impl<'a> Scheduler<'a> {
@@ -35,7 +37,11 @@ impl<'a> Scheduler<'a> {
             false,                    // fifo_sched (enable BPF FIFO scheduling)
             false,                    // debug (debug mode)
         )?;
-        Ok(Self { bpf })
+        Ok(Self {
+            bpf,
+            served_rr: 0,
+            served_fifo: 0,
+        })
     }
 
     fn now() -> u64 {
@@ -61,19 +67,17 @@ impl<'a> Scheduler<'a> {
                         Ok(result) => result.nice,
                         Err(_) => continue,
                     };
-                    print!("pid: {}, nice: {}", task.pid, stat(task.pid).unwrap().nice);
 
                     // Allow to dispatch on the first CPU available.
                     let _ = dispatched_task.set_flag(RL_CPU_ANY);
+                    let _ = dispatched_task.set_flag(RL_PREEMPT_CPU.into());
 
                     let _ = if nice < 0 {
                         // FIFO
-                        println!("\t\t Using FIFO");
+                        self.served_fifo += 1;
                         dispatched_task.set_slice_ns(u64::MAX)
                     } else {
-                        // RR
-                        println!("\t\t Using RR");
-                        dispatched_task.set_flag(RL_PREEMPT_CPU.into())
+                        self.served_rr += 1;
                     };
 
                     let _ = self.bpf.dispatch_task(&dispatched_task).unwrap();
@@ -105,13 +109,15 @@ impl<'a> Scheduler<'a> {
         let nr_sched_congested = *self.bpf.nr_sched_congested_mut();
 
         println!(
-            "user={} kernel={} cancel={} bounce={} fail={} cong={}",
+            "user={} kernel={} cancel={} bounce={} fail={} cong={} served_rr={}, served_fifo={}",
             nr_user_dispatches,
             nr_kernel_dispatches,
             nr_cancel_dispatches,
             nr_bounce_dispatches,
             nr_failed_dispatches,
             nr_sched_congested,
+            self.served_rr,
+            self.served_fifo,
         );
     }
 
