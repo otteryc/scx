@@ -21,6 +21,7 @@ subdir('scx_rustland')
 subdir('scx_rlfifo')
 subdir('scx_bpfland')
 subdir('scx_lavd')
+subdir('scx_two_level_queue')
 
 # the target to compile all rust schedulers
 custom_target('rust_scheds',

@@ -1,0 +1,20 @@
+[package]
+name = "scx_two_layer_queue"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0"
+plain = "0.2.3"
+ctrlc = { version = "3.1", features = ["termination"] }
+libbpf-rs = "0.23.1"
+libc = "0.2.137"
+scx_utils = { path = "../../../rust/scx_utils", version = "0.8.1" }
+scx_rustland_core = { path = "../../../rust/scx_rustland_core", version = "0.5" }
+procinfo = "0.4.2"
+
+[build-dependencies]
+scx_utils = { path = "../../../rust/scx_utils", version = "0.8.1" }
+scx_rustland_core = { path = "../../../rust/scx_rustland_core", version = "0.5" }
+
+[features]
+enable_backtrace = []
